@@ -33,22 +33,75 @@ namespace '/api/lvl2' do
     rmensualretencion="#{params['rmensualretencion']}"#cantidad de backups retenidos
     ranual="#{params['ranual']}"
     ranualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
+    regioncluster="#{params['regioncluster']}"#region del cluster de IKS donde se desplegará PX-Backup
     almacenamientocos=0
-
+    clusteriks={}
     resultado=[]
-
-    #parametros recibidos
+    almacenamientorespaldos=0
+    preciofinal=0
+    ##########################
+    # Calculo Almacenamiento
+    ##########################
     logger.info("********************************")
     logger.info("#{urlapi}/api/v1/volumenrespaldospxbackup?almacenamientogb=#{almacenamientogb}&rsemanal=#{rsemanal}&rsemanalretencion=#{rsemanalretencion}&rdiario=#{rdiario}&rdiarioretencion=#{rdiarioretencion}&rmensual=#{rmensual}&rmensualretencion=#{rmensualretencion}&ranual=#{ranual}&ranualretencion=#{ranualretencion}")
     logger.info("********************************")
     respuestasizing = RestClient.get "#{urlapi}/api/v1/volumenrespaldospxbackup?almacenamientogb=#{almacenamientogb}&rsemanal=#{rsemanal}&rsemanalretencion=#{rsemanalretencion}&rdiario=#{rdiario}&rdiarioretencion=#{rdiarioretencion}&rmensual=#{rmensual}&rmensualretencion=#{rmensualretencion}&ranual=#{ranual}&ranualretencion=#{ranualretencion}", {:params => {}}
     logger.info(respuestasizing.to_s)
     almacenamientocos=JSON.parse(respuestasizing.to_s)
+    almacenamientorespaldos=almacenamientocos["volumentotalcomprimidogb"]
     resultado.push(almacenamientocos)
-    resultado.to_json
-    #tamanoiks=2
-    #flavoriks="4x16"
 
+    ##########################
+    # Calculo clúster para PX-Backup
+    ##########################
+    tamanoiks=2  #de acuerdo a documentación de Portworx debe ser 3, con 2 funciona bien
+    flavoriks="4x16" #pruebas realizadas con 4x16, de acuerdo a Portworx debe ser 4x8 y 3 nodos
+    infra_type="shared"
+    respuestasizing = RestClient.get "#{urlapi}/api/v1/ikspreciocluster?region=#{regioncluster}&wn=#{tamanoiks}&flavor=#{flavoriks}&infra_type=#{infra_type}", {:params => {}}
+    clusteriks=JSON.parse(respuestasizing.to_s)
+    logger.info("RestClient: " +respuestasizing.to_s);
+    logger.info("JSON : "+ clusteriks.to_s);
+    preciofinal=preciofinal+clusteriks[0]["precio"]
+    resultado.push(clusteriks[0])
+
+    ##########################
+    # Calculo precio para PX-Backup
+    ##########################
+    tamanoiks=2  #de acuerdo a documentación de Portworx debe ser 3, con 2 funciona bien
+    flavoriks="4x16" #pruebas realizadas con 4x16, de acuerdo a Portworx debe ser 4x8 y 3 nodos
+    infra_type="shared"
+    respuestasizing = RestClient.get "#{urlapi}/api/v1/pxbackupprecio?workers=#{tamanoiks}", {:params => {}}
+    pxbackup=JSON.parse(respuestasizing.to_s)
+    logger.info("RestClient: " +respuestasizing.to_s);
+    logger.info("JSON : "+ pxbackup.to_s);
+    preciofinal=preciofinal+pxbackup["precio"]
+    resultado.push(pxbackup)
+
+    ##########################
+    # Calculo precio COS
+    ##########################
+    tamanoiks=2  #de acuerdo a documentación de Portworx debe ser 3, con 2 funciona bien
+    flavoriks="4x16" #pruebas realizadas con 4x16, de acuerdo a Portworx debe ser 4x8 y 3 nodos
+    infra_type="shared"
+
+
+    countryrespaldo = "#{params['countryrespaldo']}"
+    service_type ="cold vault" #considera que los respaldos son cold vault
+    region ="mexico" #considera que el país por defecto es México
+    resiliency ="#{params['resiliencybackup']}"
+    #storage="#{params['storage']}".to_i #Unidades en GB
+    retrival=almacenamientorespaldos*0.05 #Considera 5% de recuperación de respaldos
+    publicoutbound=0 #Unidades en GB, sin salida publica de los respaldos
+    opa=10000 #valores bajos esperados para un respaldo
+    opb=100000 #valores bajos esperados para un respaldo
+
+    respuestasizing = RestClient.get "#{urlapi}/api/v1/cospricing?country=#{countryrespaldo}&region=#{region}&type=#{service_type}&resiliency=#{resiliency}&storage=#{almacenamientorespaldos}&retrival=#{retrival}&opa=#{opa}&opb=#{opb}&publicoutbound=#{publicoutbound}", {:params => {}}
+    cospricing=JSON.parse(respuestasizing.to_s)
+    preciofinal=preciofinal+cospricing["precio"]
+    logger.info("precio calculado: "+preciofinal.to_s)
+    resultado.push(cospricing)
+    resultado.push({preciototal:preciofinal.round(2)})
+    resultado.to_json
   end
 
 end
@@ -199,7 +252,7 @@ namespace '/api/v1' do
       logger.info("calculando precio px-backup")
       precio=workers.to_i*0.2*720
       logger.info("precio"+precio.round(2).to_s)
-      resultado={ workers: workers, precio: precio.round(2).to_s}
+      resultado={ workers: workers, precio: precio.round(2).to_f}
     rescue PG::Error => e
       logger.info(e.message.to_s)
     end
@@ -222,7 +275,7 @@ namespace '/api/v1' do
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price precio from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' order by precio asc LIMIT 1"
       t_messages.each do |s_message|
-          resultado.push({ flavor: s_message['flavor'], infra_type: s_message['infra_type'], workers: s_message['workers'], precio: s_message['precio'], precio_subs: s_message['precio_subs'] })
+          resultado.push({ flavor: s_message['flavor'], infra_type: s_message['infra_type'], workers: s_message['workers'], precio: s_message['precio'].to_f })
       end
       logger.info(resultado.to_s)
     rescue PG::Error => e
@@ -244,7 +297,7 @@ namespace '/api/v1' do
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type,#{params['wn']} as workers, #{params['wn']}*price precio,region from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' and flavor='#{flavor}' order by precio asc LIMIT 1"
       t_messages.each do |s_message|
-          resultado.push({ flavor: s_message['flavor'], infra_type: s_message['infra_type'], workers: s_message['workers'], precio: s_message['precio'], region: s_message['region'] })
+          resultado.push({ flavor: s_message['flavor'], infra_type: s_message['infra_type'], workers: s_message['workers'], precio: s_message['precio'].to_f, region: s_message['region'] })
       end
       logger.info(resultado.to_s)
     rescue PG::Error => e
@@ -395,7 +448,7 @@ namespace '/api/v1' do
         ensure
           connection.close if connection
         end
-        resultado={precio: resultado1+resultado2+resultado3, "nota": "El precio para algunos escenarios puede varias 10%, valida en cloud.ibm.com"}
+        resultado={precio: (resultado1+resultado2+resultado3).round(2), "nota": "El precio para algunos escenarios puede varias 10%, valida en cloud.ibm.com. Ingresa los siguientes valores: Pais:#{country} Tipo de storage:#{service_type} region:#{region} resiliencia:#{resiliency} storage:#{storage} retrival:#{retrival} publicoutbound:#{publicoutbound} Op A:#{opa} Op B:#{opb} "}
         logger.info("precio: "+resultado.to_s)
         resultado.to_json
       end
