@@ -12,6 +12,48 @@ get '/' do
     'APIs Optimización'
 end
 
+
+namespace '/api/lvl2' do
+  before do
+    content_type 'application/json'
+  end
+  urlapi="localhost:8080"
+
+
+  get '/pxbackupsol' do
+    logger = Logger.new(STDOUT)
+
+    almacenamientogb="#{params['almacenamientogb']}" #cantidad en GB
+    #parametros de politicas
+    rsemanal="#{params['rsemanal']}"
+    rsemanalretencion="#{params['rsemanalretencion']}" #cantidad de backups retenidos
+    rdiario="#{params['rdiario']}"
+    rdiarioretencion="#{params['rdiarioretencion']}"#cantidad de backups retenidos
+    rmensual="#{params['rmensual']}"
+    rmensualretencion="#{params['rmensualretencion']}"#cantidad de backups retenidos
+    ranual="#{params['ranual']}"
+    ranualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
+    almacenamientocos=0
+
+    resultado=[]
+
+    #parametros recibidos
+    logger.info("********************************")
+    logger.info("#{urlapi}/api/v1/volumenrespaldospxbackup?almacenamientogb=#{almacenamientogb}&rsemanal=#{rsemanal}&rsemanalretencion=#{rsemanalretencion}&rdiario=#{rdiario}&rdiarioretencion=#{rdiarioretencion}&rmensual=#{rmensual}&rmensualretencion=#{rmensualretencion}&ranual=#{ranual}&ranualretencion=#{ranualretencion}")
+    logger.info("********************************")
+    respuestasizing = RestClient.get "#{urlapi}/api/v1/volumenrespaldospxbackup?almacenamientogb=#{almacenamientogb}&rsemanal=#{rsemanal}&rsemanalretencion=#{rsemanalretencion}&rdiario=#{rdiario}&rdiarioretencion=#{rdiarioretencion}&rmensual=#{rmensual}&rmensualretencion=#{rmensualretencion}&ranual=#{ranual}&ranualretencion=#{ranualretencion}", {:params => {}}
+    logger.info(respuestasizing.to_s)
+    almacenamientocos=JSON.parse(respuestasizing.to_s)
+    resultado.push(almacenamientocos)
+    resultado.to_json
+    #tamanoiks=2
+    #flavoriks="4x16"
+
+  end
+
+end
+
+
 namespace '/api/v1' do
   before do
     content_type 'application/json'
@@ -116,25 +158,25 @@ namespace '/api/v1' do
     resultado=[]
     begin
       logger.info("calculando almacenamiento")
-      if rsemanal == true then
+      if rsemanal
         vol=almacenamientogb.to_f*rsemanalretencion.to_i
         logger.info("volumen semanal (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
       end
-      if rdiario == true then
+      if rdiario
         vol=almacenamientogb.to_f*rdiarioretencion.to_i
         logger.info("volumen semanal (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
       end
-      if rmensual == true then
+      if rmensual
         vol=almacenamientogb.to_f*rmensualretencion.to_i
         logger.info("volumen semanal (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
       end
-      if ranual == true then
+      if ranual
         vol=almacenamientogb.to_f*ranualretencion.to_i
         logger.info("volumen semanal (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
@@ -213,8 +255,27 @@ namespace '/api/v1' do
     resultado.to_json
   end
 
-  #tamanoiks=2
-  #flavoriks="4x16"
+  get '/ikssizingcluster' do
+    logger = Logger.new(STDOUT)
+    cpu="#{params['cpu']}"
+    ram="#{params['ram']}"
+    infra_type="#{params['infra_type']}"
+    region="#{params['region']}"
+    resultado=[]
+    begin
+      connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
+      t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price precio from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' order by precio asc"
+      t_messages.each do |s_message|
+          resultado.push({ flavor: s_message['flavor'], infra_type: s_message['infra_type'], workers: s_message['workers'], precio: s_message['precio'], precio_subs: s_message['precio_subs'] })
+      end
+      logger.info(resultado.to_s)
+    rescue PG::Error => e
+      logger.info(e.message.to_s)
+    ensure
+      connection.close if connection
+    end
+    resultado.to_json
+  end
 
 
       ####################################################################
