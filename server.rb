@@ -18,7 +18,7 @@ namespace '/api/lvl2' do
     content_type 'application/json'
   end
   #urlapi="localhost:8080"
-    urlapi="https://apis.9sxuen7c9q9.us-south.codeengine.appdomain.cloud"
+    urlapi="apis.9sxuen7c9q9.us-south.codeengine.appdomain.cloud"
 
   get '/pxbackupsol' do
     logger = Logger.new(STDOUT)
