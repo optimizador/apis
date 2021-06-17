@@ -156,6 +156,9 @@ namespace '/api/v1' do
     resultado.to_json
   end
 
+  get '/preciocluster' do
+  
+  end
 
 
   ####################################################################
