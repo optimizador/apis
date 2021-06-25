@@ -493,7 +493,7 @@ namespace '/api/v2' do
     resultado=[]
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
-      t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_wo_subs precio, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_w_subs precio_subs from public.ocp_classic_flavors where greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))>=2 and infra_type='#{infra_type}' and region='#{region}' order by precio asc LIMIT 1"
+      t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_wo_subs precio, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_w_subs precio_subs from public.ocp_classic_flavors where infra_type='#{infra_type}' and region='#{region}' order by precio asc LIMIT 1"
       t_messages.each do |s_message|
           resultado.push({ flavor: s_message['flavor'], infra_type: s_message['infra_type'], workers: s_message['workers'], precio: s_message['precio'], precio_subs: s_message['precio_subs'] })
       end
@@ -515,7 +515,7 @@ namespace '/api/v2' do
     resultado=[]
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
-      t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_wo_subs precio, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_w_subs precio_subs from public.ocp_classic_flavors where greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))>=2 and infra_type='#{infra_type}' and region='#{region}' order by precio asc"
+      t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_wo_subs precio, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_w_subs precio_subs from public.ocp_classic_flavors where infra_type='#{infra_type}' and region='#{region}' order by precio asc"
       t_messages.each do |s_message|
           resultado.push({ flavor: s_message['flavor'], infra_type: s_message['infra_type'], workers: s_message['workers'], precio: s_message['precio'], precio_subs: s_message['precio_subs'] })
       end
