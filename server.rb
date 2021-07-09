@@ -492,8 +492,17 @@ namespace '/api/v2' do
 ####################################################################
   get '/sizingclusteroptimo' do
     logger = Logger.new(STDOUT)
-    cpu="#{params['cpu']}"
-    ram="#{params['ram']}"
+    cpu_aux="#{params['cpu']}".to_i
+    ram_aux="#{params['ram']}".to_i
+    
+    if cpu_aux <= 4 || ram_aux <= 16
+      cpu = 5
+      ram = 17
+    else  
+      cpu = cpu_aux
+      ram = ram_aux
+    end
+
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
@@ -514,8 +523,17 @@ namespace '/api/v2' do
 
   get '/sizingcluster' do
     logger = Logger.new(STDOUT)
-    cpu="#{params['cpu']}"
-    ram="#{params['ram']}"
+    cpu_aux="#{params['cpu']}".to_i
+    ram_aux="#{params['ram']}".to_i
+
+    if cpu_aux <= 4 || ram_aux <= 16
+      cpu = 5
+      ram = 17
+    else  
+      cpu = cpu_aux
+      ram = ram_aux
+    end
+
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
