@@ -111,6 +111,52 @@ namespace '/api/v1' do
   before do
     content_type 'application/json'
   end
+
+####################################################################
+#
+# Servicios para dimensionamiento de Soporte
+#
+####################################################################
+  get '/sizingsupport' do
+      logger = Logger.new(STDOUT)
+      type="#{params['type']}"
+      precioservicios="#{params['precioservicios']}"
+      preciosoporte=0
+      resultado=[]
+      begin
+        if type=="advanced" then
+          if precioservicios<2000 then
+            preciosoporte=200
+          elseif precioservicios>=2000 and precioservicios <10000 then
+            preciosoporte=precioservicios*.06
+            elseif precioservicios>=10000 and precioservicios <100000 then
+            preciosoporte=precioservicios*.04
+            elseif precioservicios>=100000 then
+            preciosoporte=precioservicios*.02
+          end
+        end
+
+        if type=="premium" then
+          if precioservicios<100000 then
+            preciosoporte=10000
+          elseif precioservicios>=100000 and precioservicios <500000 then
+            preciosoporte=precioservicios*.06
+            elseif precioservicios>=500000 and precioservicios <1000000 then
+            preciosoporte=precioservicios*.04
+            elseif precioservicios>=1000000 then
+            preciosoporte=precioservicios*.03
+          end
+        end
+
+        resultado={ type: type, precio: preciosoporte}
+        logger.info(resultado.to_s)
+      rescue PG::Error => e
+        logger.info(e.message.to_s)
+      ensure
+        connection.close if connection
+      end
+      resultado.to_json
+  end
 ####################################################################
 #
 # Servicios para dimensionamiento de clúster OCP
@@ -494,11 +540,11 @@ namespace '/api/v2' do
     logger = Logger.new(STDOUT)
     cpu_aux="#{params['cpu']}".to_i
     ram_aux="#{params['ram']}".to_i
-    
+
     if cpu_aux <= 4 || ram_aux <= 16
       cpu = 5
       ram = 17
-    else  
+    else
       cpu = cpu_aux
       ram = ram_aux
     end
@@ -529,7 +575,7 @@ namespace '/api/v2' do
     if cpu_aux <= 4 || ram_aux <= 16
       cpu = 5
       ram = 17
-    else  
+    else
       cpu = cpu_aux
       ram = ram_aux
     end
