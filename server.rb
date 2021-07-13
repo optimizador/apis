@@ -120,31 +120,37 @@ namespace '/api/v1' do
   get '/sizingsupport' do
       logger = Logger.new(STDOUT)
       type="#{params['type']}"
-      precioservicios="#{params['precioservicios']}"
+      precioservicios="#{params['precioservicios']}".to_f
       preciosoporte=0
       resultado=[]
       begin
-        if type=="advanced" then
-          if precioservicios<2000 then
+        if type=="advanced"
+          if precioservicios<2000
             preciosoporte=200
-          elseif precioservicios>=2000 and precioservicios <10000 then
-            preciosoporte=precioservicios*.06
-            elseif precioservicios>=10000 and precioservicios <100000 then
-            preciosoporte=precioservicios*.04
-            elseif precioservicios>=100000 then
-            preciosoporte=precioservicios*.02
+          end
+          if precioservicios>=2000 and precioservicios <10000
+            preciosoporte=precioservicios*0.06
+          end
+          if precioservicios>=10000 and precioservicios <100000
+            preciosoporte=precioservicios*0.04
+          end
+          if precioservicios>=100000
+            preciosoporte=precioservicios*0.02
           end
         end
 
-        if type=="premium" then
-          if precioservicios<100000 then
+        if type=="premium"
+          if precioservicios<100000
             preciosoporte=10000
-          elseif precioservicios>=100000 and precioservicios <500000 then
-            preciosoporte=precioservicios*.06
-            elseif precioservicios>=500000 and precioservicios <1000000 then
-            preciosoporte=precioservicios*.04
-            elseif precioservicios>=1000000 then
-            preciosoporte=precioservicios*.03
+          end
+          if precioservicios>=100000 and precioservicios <500000
+            preciosoporte=precioservicios*0.06
+          end
+          if precioservicios>=500000 and precioservicios <1000000
+            preciosoporte=precioservicios*0.04
+          end
+          if precioservicios>=1000000
+            preciosoporte=precioservicios*0.03
           end
         end
 
@@ -152,8 +158,6 @@ namespace '/api/v1' do
         logger.info(resultado.to_s)
       rescue PG::Error => e
         logger.info(e.message.to_s)
-      ensure
-        connection.close if connection
       end
       resultado.to_json
   end
