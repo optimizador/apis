@@ -168,8 +168,8 @@ namespace '/api/v1' do
 ####################################################################
   get '/sizingclusteroptimo' do
     logger = Logger.new(STDOUT)
-    cpu="#{params['cpu']}"
-    ram="#{params['ram']}"
+    cpu="#{params['cpu']}".to_f+2
+    ram="#{params['ram']}".to_f+8
     resultado=[]
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
@@ -188,8 +188,8 @@ namespace '/api/v1' do
 
   get '/sizingcluster' do
     logger = Logger.new(STDOUT)
-    cpu="#{params['cpu']}"
-    ram="#{params['ram']}"
+    cpu="#{params['cpu']}".to_f+2
+    ram="#{params['ram']}".to_f+8
     resultado=[]
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
@@ -337,8 +337,8 @@ namespace '/api/v1' do
     ####################################################################
   get '/ikssizingclusteroptimo' do
     logger = Logger.new(STDOUT)
-    cpu="#{params['cpu']}"
-    ram="#{params['ram']}"
+    cpu="#{params['cpu']}".to_f+1
+    ram="#{params['ram']}".to_f+2
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
@@ -381,8 +381,8 @@ namespace '/api/v1' do
 
   get '/ikssizingcluster' do
     logger = Logger.new(STDOUT)
-    cpu="#{params['cpu']}"
-    ram="#{params['ram']}"
+    cpu="#{params['cpu']}".to_f+1
+    ram="#{params['ram']}".to_f+2
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
@@ -542,8 +542,8 @@ namespace '/api/v2' do
 ####################################################################
   get '/sizingclusteroptimo' do
     logger = Logger.new(STDOUT)
-    cpu_aux="#{params['cpu']}".to_i
-    ram_aux="#{params['ram']}".to_i
+    cpu_aux="#{params['cpu']}".to_f+2
+    ram_aux="#{params['ram']}".to_f+8
 
     if cpu_aux <= 4 || ram_aux <= 16
       cpu = 5
@@ -573,8 +573,8 @@ namespace '/api/v2' do
 
   get '/sizingcluster' do
     logger = Logger.new(STDOUT)
-    cpu_aux="#{params['cpu']}".to_i
-    ram_aux="#{params['ram']}".to_i
+    cpu_aux="#{params['cpu']}".to_f+2
+    ram_aux="#{params['ram']}".to_f+8
 
     if cpu_aux <= 4 || ram_aux <= 16
       cpu = 5
