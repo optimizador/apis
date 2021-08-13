@@ -154,7 +154,7 @@ namespace '/api/v1' do
           end
         end
 
-        resultado={ type: type, precio: preciosoporte, precioservicios:precioservicios}
+        resultado={ type: type, precio: preciosoporte.round(2).to_f, precioservicios:precioservicios}
         logger.info(resultado.to_s)
       rescue PG::Error => e
         logger.info(e.message.to_s)
