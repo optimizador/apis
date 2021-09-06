@@ -467,7 +467,7 @@ end
     rmensualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
     ranual="#{params['ranual']}"
     ranualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
-    diff="#{params['diff']}"
+    diff="#{params['diff']}".to_i
     ratiocompresion=2.5 #algoritmo de compresion LZ77
     volumentotal=0
     volumentotalcomprimido=0
