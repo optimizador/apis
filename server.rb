@@ -473,6 +473,18 @@ end
     ratiocompresion=2.5 #algoritmo de compresion LZ77
     volumentotal=0
     volumentotalcomprimido=0
+      
+      logger.info("Parametros recibidos:")
+      logger.info("almacenamientogb:"+almacenamientogb.to_s)
+      logger.info("rsemanal:"+rsemanal.to_s)
+      logger.info("rsemanalretencion:"+ rsemanalretencion.to_s)
+      logger.info("rdiario:" + rdiario.to_s)
+      logger.info("rdiarioretencion:" +rdiarioretencion.to_s)
+      logger.info("rmensual:" + rmensual.to_s)
+      logger.info("rmensualretencion:" +rmensualretencion.to_s)
+      logger.info("ranual:" +ranual.to_s)
+      logger.info("ranualretencion:" +ranualretencion.to_s)
+            logger.info("diff:" +diff.to_s)
     resultado=[]
     begin
       logger.info("calculando almacenamiento")
