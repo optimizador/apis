@@ -299,9 +299,126 @@ end
 
   ####################################################################
   #
+  # Servicios para dimensionamiento para Veeam
+  #
+  ####################################################################
+
+  
+  get '/volumenrespaldosveeam' do
+    logger = Logger.new(STDOUT)
+    almacenamientogb="#{params['almacenamientogb']}"
+    #parametros de politicas
+    rsemanal="#{params['rsemanal']}"
+    rsemanalretencion="#{params['rsemanalretencion']}" #cantidad de backups retenidos
+    rdiario="#{params['rdiario']}"
+    rdiarioretencion="#{params['rdiarioretencion']}"#incrementales diarios
+    rmensual="#{params['rmensual']}"
+    rmensualretencion="#{params['rmensualretencion']}"#cantidad de backups retenidos
+    rmensual="#{params['ranual']}"
+    rmensualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
+    ranual="#{params['ranual']}"
+    ranualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
+    diff="#{params['diff']}"
+    ratiocompresion=2 
+    volumentotal=0
+    volumentotalcomprimido=0
+    resultado=[]
+    begin
+      logger.info("calculando almacenamiento")
+      if rsemanal
+        vol=almacenamientogb.to_f*rsemanalretencion.to_i
+        logger.info("volumen semanal (GB):"+vol.to_s)
+        volumentotal=volumentotal+vol
+        resultado={ volumentotal: volumentotal}
+      end
+      if rdiario
+        vol=almacenamientogb.to_f*(diff/100)*rdiarioretencion.to_i
+        logger.info("volumen semanal (GB):"+vol.to_s)
+        volumentotal=volumentotal+vol
+        resultado={ volumentotal: volumentotal}
+      end
+      if rmensual
+        vol=almacenamientogb.to_f*rmensualretencion.to_i
+        logger.info("volumen semanal (GB):"+vol.to_s)
+        volumentotal=volumentotal+vol
+        resultado={ volumentotal: volumentotal}
+      end
+      if ranual
+        vol=almacenamientogb.to_f*ranualretencion.to_i
+        logger.info("volumen semanal (GB):"+vol.to_s)
+        volumentotal=volumentotal+vol
+        resultado={ volumentotal: volumentotal}
+      end
+      volumentotalcomprimido=volumentotal/ratiocompresion
+      resultado={ volumentotalgb: volumentotal, volumentotalcomprimidogb: volumentotalcomprimido}
+    rescue PG::Error => e
+      logger.info(e.message.to_s)
+    end
+    resultado.to_json
+  end
+
+
+
+  ####################################################################
+  #
   # Servicios para dimensionamiento para PX-backup
   #
   ####################################################################
+
+  get '/volumenrespaldospxbackup_w_pxenterprise' do
+    logger = Logger.new(STDOUT)
+    almacenamientogb="#{params['almacenamientogb']}"
+    #parametros de politicas
+    rsemanal="#{params['rsemanal']}"
+    rsemanalretencion="#{params['rsemanalretencion']}" #cantidad de backups retenidos
+    rdiario="#{params['rdiario']}"
+    rdiarioretencion="#{params['rdiarioretencion']}"#incrementales diarios
+    rmensual="#{params['rmensual']}"
+    rmensualretencion="#{params['rmensualretencion']}"#cantidad de backups retenidos
+    rmensual="#{params['ranual']}"
+    rmensualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
+    ranual="#{params['ranual']}"
+    ranualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
+    diff="#{params['diff']}"
+    ratiocompresion=2.5 #algoritmo de compresion LZ77
+    volumentotal=0
+    volumentotalcomprimido=0
+    resultado=[]
+    begin
+      logger.info("calculando almacenamiento")
+      if rsemanal
+        vol=almacenamientogb.to_f*rsemanalretencion.to_i
+        logger.info("volumen semanal (GB):"+vol.to_s)
+        volumentotal=volumentotal+vol
+        resultado={ volumentotal: volumentotal}
+      end
+      if rdiario
+        vol=almacenamientogb.to_f*(diff/100)*rdiarioretencion.to_i
+        logger.info("volumen semanal (GB):"+vol.to_s)
+        volumentotal=volumentotal+vol
+        resultado={ volumentotal: volumentotal}
+      end
+      if rmensual
+        vol=almacenamientogb.to_f*rmensualretencion.to_i
+        logger.info("volumen semanal (GB):"+vol.to_s)
+        volumentotal=volumentotal+vol
+        resultado={ volumentotal: volumentotal}
+      end
+      if ranual
+        vol=almacenamientogb.to_f*ranualretencion.to_i
+        logger.info("volumen semanal (GB):"+vol.to_s)
+        volumentotal=volumentotal+vol
+        resultado={ volumentotal: volumentotal}
+      end
+      volumentotalcomprimido=volumentotal/ratiocompresion
+      resultado={ volumentotalgb: volumentotal, volumentotalcomprimidogb: volumentotalcomprimido}
+    rescue PG::Error => e
+      logger.info(e.message.to_s)
+    end
+    resultado.to_json
+  end
+
+
 
   get '/volumenrespaldospxbackup' do
     logger = Logger.new(STDOUT)
