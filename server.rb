@@ -3,6 +3,8 @@ require 'sinatra'
 require 'pg'
 require "sinatra/namespace"
 require 'rest-client'
+require 'bigdecimal'
+require 'bigdecimal/util'
 
 set :bind, '0.0.0.0'
 set :port, 8080
@@ -475,25 +477,25 @@ end
     begin
       logger.info("calculando almacenamiento")
       if rsemanal
-        vol=almacenamientogb.to_f*rsemanalretencion.to_i
+        vol=almacenamientogb.to_d*rsemanalretencion.to_i
         logger.info("volumen semanal (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
       end
       if rdiario
-        vol=almacenamientogb.to_f*(diff/100)*rdiarioretencion.to_i
+        vol=almacenamientogb.to_d*(diff/100)*rdiarioretencion.to_i
         logger.info("volumen semanal (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
       end
       if rmensual
-        vol=almacenamientogb.to_f*rmensualretencion.to_i
+        vol=almacenamientogb.to_d*rmensualretencion.to_i
         logger.info("volumen semanal (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
       end
       if ranual
-        vol=almacenamientogb.to_f*ranualretencion.to_i
+        vol=almacenamientogb.to_d*ranualretencion.to_i
         logger.info("volumen semanal (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
