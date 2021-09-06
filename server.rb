@@ -104,6 +104,94 @@ namespace '/api/lvl2' do
     resultado.to_json
   end
 
+
+
+  get '/pxbackupsol_pxent' do
+    logger = Logger.new(STDOUT)
+
+    almacenamientogb="#{params['almacenamientogb']}" #cantidad en GB
+    #parametros de politicas
+    rsemanal="#{params['rsemanal']}"
+    rsemanalretencion="#{params['rsemanalretencion']}" #cantidad de backups retenidos
+    rdiario="#{params['rdiario']}"
+    rdiarioretencion="#{params['rdiarioretencion']}"#cantidad de backups retenidos
+    rmensual="#{params['rmensual']}"
+    rmensualretencion="#{params['rmensualretencion']}"#cantidad de backups retenidos
+    ranual="#{params['ranual']}"
+    ranualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
+    diff="#{params['diff']}"#cantidad de backups retenidos
+    regioncluster="#{params['regioncluster']}"#region del cluster de IKS donde se desplegará PX-Backup
+    almacenamientocos=0
+    clusteriks={}
+    resultado=[]
+    almacenamientorespaldos=0
+    preciofinal=0
+    ##########################
+    # Calculo Almacenamiento
+    ##########################
+    logger.info("********************************")
+    callapi="#{urlapi}/api/v1/volumenrespaldospxbackup_w_pxenterprise?almacenamientogb=#{almacenamientogb}&rsemanal=#{rsemanal}&rsemanalretencion=#{rsemanalretencion}&rdiario=#{rdiario}&rdiarioretencion=#{rdiarioretencion}&rmensual=#{rmensual}&rmensualretencion=#{rmensualretencion}&ranual=#{ranual}&ranualretencion=#{ranualretencion}&diff=#{diff}"
+    logger.info(callapi)
+    logger.info("********************************")
+    respuestasizing = RestClient.get callapi, {:params => {}}
+    logger.info(respuestasizing.to_s)
+    almacenamientocos=JSON.parse(respuestasizing.to_s)
+    almacenamientorespaldos=almacenamientocos["volumentotalcomprimidogb"]
+    resultado.push(almacenamientocos)
+
+    ##########################
+    # Calculo clúster para PX-Backup
+    ##########################
+    tamanoiks=2  #de acuerdo a documentación de Portworx debe ser 3, con 2 funciona bien
+    flavoriks="4x16" #pruebas realizadas con 4x16, de acuerdo a Portworx debe ser 4x8 y 3 nodos
+    infra_type="shared"
+    respuestasizing = RestClient.get "#{urlapi}/api/v1/ikspreciocluster?region=#{regioncluster}&wn=#{tamanoiks}&flavor=#{flavoriks}&infra_type=#{infra_type}", {:params => {}}
+    clusteriks=JSON.parse(respuestasizing.to_s)
+    logger.info("RestClient: " +respuestasizing.to_s);
+    logger.info("JSON : "+ clusteriks.to_s);
+    preciofinal=preciofinal+clusteriks[0]["precio"]
+    resultado.push(clusteriks[0])
+
+    ##########################
+    # Calculo precio para PX-Backup
+    ##########################
+    tamanoiks=2  #de acuerdo a documentación de Portworx debe ser 3, con 2 funciona bien
+    flavoriks="4x16" #pruebas realizadas con 4x16, de acuerdo a Portworx debe ser 4x8 y 3 nodos
+    infra_type="shared"
+    respuestasizing = RestClient.get "#{urlapi}/api/v1/pxbackupprecio?workers=#{tamanoiks}", {:params => {}}
+    pxbackup=JSON.parse(respuestasizing.to_s)
+    logger.info("RestClient: " +respuestasizing.to_s);
+    logger.info("JSON : "+ pxbackup.to_s);
+    preciofinal=preciofinal+pxbackup["precio"]
+    resultado.push(pxbackup)
+
+    ##########################
+    # Calculo precio COS
+    ##########################
+    tamanoiks=2  #de acuerdo a documentación de Portworx debe ser 3, con 2 funciona bien
+    flavoriks="4x16" #pruebas realizadas con 4x16, de acuerdo a Portworx debe ser 4x8 y 3 nodos
+    infra_type="shared"
+
+
+    countryrespaldo = "#{params['countryrespaldo']}"
+    service_type ="cold vault" #considera que los respaldos son cold vault
+    region ="mexico" #considera que el país por defecto es México
+    resiliency ="#{params['resiliencybackup']}"
+    #storage="#{params['storage']}".to_i #Unidades en GB
+    retrival=almacenamientorespaldos*0.05 #Considera 5% de recuperación de respaldos
+    publicoutbound=0 #Unidades en GB, sin salida publica de los respaldos
+    opa=10000 #valores bajos esperados para un respaldo
+    opb=100000 #valores bajos esperados para un respaldo
+
+    respuestasizing = RestClient.get "#{urlapi}/api/v1/cospricing?country=#{countryrespaldo}&region=#{region}&type=#{service_type}&resiliency=#{resiliency}&storage=#{almacenamientorespaldos}&retrival=#{retrival}&opa=#{opa}&opb=#{opb}&publicoutbound=#{publicoutbound}", {:params => {}}
+    cospricing=JSON.parse(respuestasizing.to_s)
+    preciofinal=preciofinal+cospricing["precio"]
+    logger.info("precio calculado: "+preciofinal.to_s)
+    resultado.push(cospricing)
+    resultado.push({preciototal:preciofinal.round(2)})
+    resultado.to_json
+  end
+
 end
 
 
