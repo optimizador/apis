@@ -495,7 +495,7 @@ end
         resultado={ volumentotal: volumentotal}
       end
       if rdiario
-        vol=almacenamientogb.to_f*(diff/100)*rdiarioretencion.to_i
+        vol=almacenamientogb.to_f*rdiarioretencion.to_i*diff.to_i/100
         logger.info("volumen semanal (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
