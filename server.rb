@@ -404,8 +404,6 @@ end
     rdiarioretencion="#{params['rdiarioretencion']}"#incrementales diarios
     rmensual="#{params['rmensual']}"
     rmensualretencion="#{params['rmensualretencion']}"#cantidad de backups retenidos
-    rmensual="#{params['ranual']}"
-    rmensualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
     ranual="#{params['ranual']}"
     ranualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
     diff="#{params['diff']}"
