@@ -484,7 +484,7 @@ end
       logger.info("rmensualretencion:" +rmensualretencion.to_s)
       logger.info("ranual:" +ranual.to_s)
       logger.info("ranualretencion:" +ranualretencion.to_s)
-            logger.info("diff:" +diff.to_s)
+      logger.info("diff:" +diff.to_s)
     resultado=[]
     begin
       logger.info("calculando almacenamiento")
@@ -496,19 +496,19 @@ end
       end
       if rdiario
         vol=almacenamientogb.to_f*rdiarioretencion.to_i*diff.to_i/100
-        logger.info("volumen semanal (GB):"+vol.to_s)
+        logger.info("volumen diario (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
       end
       if rmensual
         vol=almacenamientogb.to_f*rmensualretencion.to_i
-        logger.info("volumen semanal (GB):"+vol.to_s)
+        logger.info("volumen mensual (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
       end
       if ranual
         vol=almacenamientogb.to_f*ranualretencion.to_i
-        logger.info("volumen semanal (GB):"+vol.to_s)
+        logger.info("volumen anual (GB):"+vol.to_s)
         volumentotal=volumentotal+vol
         resultado={ volumentotal: volumentotal}
       end
