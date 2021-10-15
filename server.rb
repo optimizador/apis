@@ -204,6 +204,43 @@ namespace '/api/v1' do
 
 ####################################################################
 #
+# Servicios para dimensionamiento de Code Engine
+#
+####################################################################
+  get '/codeengineprecio' do
+    logger = Logger.new(STDOUT)
+    cpu="#{params['cpu']}".to_f #vCPU
+    ram="#{params['ram']}".to_f #GB
+    instancias="#{params['instancias']}".to_i
+    solicitudeshttp = "#{params['solicitudeshttp']}".to_i
+    resultado=[]
+    
+    begin
+      #Precio mensual
+      #Se multiplica precio base (Seg) por 86400 para obtener precio mensual
+      precio_cpu = cpu * 0.0000319 * 86400
+      precio_ram = ram * 0.0000033 * 86400
+
+      total = (precio_cpu + precio_ram) * instancias 
+
+      solicitudes_aux = solicitudeshttp / 1000000
+
+      while solicitudes_aux > 0 
+        total = total + 0.50
+        solicitudes_aux = solicitudes_aux - 1
+      end
+
+      resultado = { cpu: cpu, ram: ram, solicitudes_http: solicitudeshttp, total: total.round(2).to_f }
+      logger.info(resultado.to_s)
+
+    rescue PG::Error => e
+      logger.info(e.message.to_s)
+    end
+    resultado.to_json
+  end
+
+####################################################################
+#
 # Servicios para dimensionamiento de Soporte
 #
 ####################################################################
