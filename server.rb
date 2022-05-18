@@ -10,17 +10,228 @@ set :bind, '0.0.0.0'
 set :port, 8080
 
 
+def proc_volumenrespaldospxbackup_w_pxenterprise (almacenamientogb="4000",rsemanal="true",rsemanalretencion="1",rdiario="true",rdiarioretencion="1",rmensual="true",rmensualretencion="1", ranual="true", ranualretencion="1", diff="3")
+  logger = Logger.new(STDOUT)
+  ratiocompresion=2.5 #algoritmo de compresion LZ77
+  volumentotal=0
+  volumentotalcomprimido=0
+
+    logger.info("Parametros recibidos:")
+    logger.info("almacenamientogb:"+almacenamientogb.to_s)
+    logger.info("rsemanal:"+rsemanal.to_s)
+    logger.info("rsemanalretencion:"+ rsemanalretencion.to_s)
+    logger.info("rdiario:" + rdiario.to_s)
+    logger.info("rdiarioretencion:" +rdiarioretencion.to_s)
+    logger.info("rmensual:" + rmensual.to_s)
+    logger.info("rmensualretencion:" +rmensualretencion.to_s)
+    logger.info("ranual:" +ranual.to_s)
+    logger.info("ranualretencion:" +ranualretencion.to_s)
+    logger.info("diff:" +diff.to_s)
+  resultado=[]
+
+    logger.info("calculando almacenamiento")
+    if rsemanal
+      vol=almacenamientogb.to_f*rsemanalretencion.to_i
+      logger.info("volumen semanal (GB):"+vol.to_s)
+      volumentotal=volumentotal+vol
+      resultado={ volumentotal: volumentotal}
+    end
+    if rdiario
+      vol=almacenamientogb.to_f*rdiarioretencion.to_i*diff.to_i/100
+      logger.info("volumen diario (GB):"+vol.to_s)
+      volumentotal=volumentotal+vol
+      resultado={ volumentotal: volumentotal}
+    end
+    if rmensual
+      vol=almacenamientogb.to_f*rmensualretencion.to_i
+      logger.info("volumen mensual (GB):"+vol.to_s)
+      volumentotal=volumentotal+vol
+      resultado={ volumentotal: volumentotal}
+    end
+    if ranual
+      vol=almacenamientogb.to_f*ranualretencion.to_i
+      logger.info("volumen anual (GB):"+vol.to_s)
+      volumentotal=volumentotal+vol
+      resultado={ volumentotal: volumentotal}
+    end
+    volumentotalcomprimido=volumentotal/ratiocompresion
+    resultado={ volumentotalgb: volumentotal, volumentotalcomprimidogb: volumentotalcomprimido}
+  return resultado
+end
+
+def proc_ikspreciocluster(wn="2",flavor="4x16",infra_type="shared",region="dallas")
+  logger = Logger.new(STDOUT)
+  #wn="#{params['wn']}"
+  #flavor="#{params['flavor']}"
+  #infra_type="#{params['infra_type']}"
+  #region="#{params['region']}"
+  resultado=[]
+
+  begin
+    hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud' #privada
+    #hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud' #publica
+    connection = PG.connect :dbname => 'ibmclouddb', :host => hostdb,:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
+    t_messages = connection.exec "select flavor, infra_type,#{wn} as workers, #{wn}*price precio,region from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' and flavor='#{flavor}' order by precio asc LIMIT 1"
+    t_messages.each do |s_message|
+        resultado.push({ flavor: s_message['flavor'], infra_type: s_message['infra_type'], workers: s_message['workers'], precio: s_message['precio'].to_f, region: s_message['region'] })
+    end
+    logger.info(resultado.to_s)
+  rescue PG::Error => e
+    logger.info(e.message.to_s)
+  ensure
+    connection.close if connection
+  end
+  return resultado.to_json
+end
+
+def proc_pxbackupprecio(workers=2)
+    logger = Logger.new(STDOUT)
+    #workers="#{params['workers']}"
+    resultado=[]
+    precio=0
+    logger.info("calculando precio px-backup")
+    precio=workers.to_i*0.2*720
+    logger.info("precio"+precio.round(2).to_s)
+    resultado={ workers: workers, precio: precio.round(2).to_f}
+    return resultado
+  end
+
+def proc_cospricing(country="mexico",region="dallas",service_type="cold vault",resiliency="regional",storage=1000,retrival=1000,opa=3000,opb=30000,publicoutbound=0)
+  hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud' #privada
+  #hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud' #publica
+  usuario='ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b'
+  contrasena='535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
+  basededatos='ibmclouddb'
+# storage,retrival, publicoutbound Unidades en GB
+#opa,opb operaciones tipo A y B
+  logger = Logger.new(STDOUT)
+
+  #country = "#{params['country']}"
+  #service_type ="#{params['type']}"
+  #region ="#{params['region']}"
+  #resiliency ="#{params['resiliency']}"
+  #storage="#{params['storage']}".to_i #Unidades en GB
+  #retrival="#{params['retrival']}".to_i #Unidades en GB
+  #publicoutbound="#{params['publicoutbound']}".to_i #Unidades en GB
+  storage_type=""
+  #opa  ="#{params['opa']}".to_i
+  #opb  ="#{params['opb']}".to_i
+  price_operation_month = 0
+  price_storage_month =0
+  resultado={}
+  if (service_type != 'smart') then
+    if (storage.to_i<=(500*1024-1)) then
+      storage_type  ="0-499TB"
+    else
+      storage_type  ="+500TB"
+    end
+  else
+    if ((opa+opb)>=1000*(storage-retrival)) then
+      storage_type  ="hot"
+    elsif ((opa+opb)<=1*(storage-retrival)) then
+      storage_type  ="cold"
+    else
+      storage_type  ="cool"
+    end
+  end
+
+
+  resultado1={}
+  logger.info("Query: " +"SELECT price_storage_month*#{storage} precio FROM public.cos_storage_pricing  WHERE country_offer='#{country}' and region='#{region}' and service_type='#{service_type}' and storage_type='#{storage_type}' order by precio asc LIMIT 1")
+  begin
+
+    connection = PG.connect :dbname => basededatos, :host => hostdb,:user => usuario, :port=>31184, :password => contrasena
+    t_messages = connection.exec "SELECT price_storage_month*#{storage} precio FROM public.cos_storage_pricing WHERE country_offer='#{country}' and region='#{region}' and service_type='#{service_type}' and storage_type='#{storage_type}' order by precio asc LIMIT 1"
+    t_messages.each do |s_message|
+      resultado1= s_message['precio'].to_f
+      logger.info("precio: "+resultado1.to_s)
+    end
+    logger.info(resultado.to_s)
+  rescue PG::Error => e
+    logger.info(e.message.to_s)
+  ensure
+    connection.close if connection
+  end
+
+  resultado2={}
+
+  begin
+
+    if (service_type != 'smart') then
+      if (storage.to_i<=(500*1024-1)) then
+        storage_type  ="0-499TB"
+      else
+        storage_type  ="+500TB"
+      end
+    else
+      if ((opa+opb)>=1000*(storage-retrival)) then
+        storage_type  ="hot"
+      elsif ((opa+opb)<=1*(storage-retrival)) then
+        storage_type  ="cold"
+      else
+        storage_type  ="cool"
+      end
+    end
+
+    logger.info("Query: " +"SELECT (a_pricing*(#{opa}/1000) + b_pricing*(#{opb}/10000) + data_retrival_pricing*#{retrival}) precio FROM public.cos_operational_request_pricing where country_offer='#{country}' and service_type='#{service_type}' and region='#{region}'  and resiliency='#{resiliency}' LIMIT 1")
+    connection = PG.connect :dbname => basededatos, :host => hostdb,:user => usuario, :port=>31184, :password => contrasena
+    t_messages = connection.exec "SELECT (a_pricing*(#{opa}/1000) + b_pricing*(#{opb}/10000) + data_retrival_pricing*#{retrival}) precio FROM public.cos_operational_request_pricing where country_offer='#{country}' and service_type='#{service_type}' and region='#{region}'  and resiliency='#{resiliency}' LIMIT 1"
+    t_messages.each do |s_message|
+      resultado2= s_message['precio'].to_f
+      logger.info("precio: "+resultado2.to_s)
+    end
+    logger.info(resultado.to_s)
+  rescue PG::Error => e
+    logger.info(e.message.to_s)
+  ensure
+    connection.close if connection
+  end
+
+
+  resultado3={}
+
+  begin
+    outboundlimittb=50
+
+              if (publicoutbound/1024 >=0 && publicoutbound/1024<=50) then
+                outboundlimittb=50
+              elsif (publicoutbound/1024 >50 && publicoutbound/1024<=150)
+                outboundlimittb=150
+              else
+                outboundlimittb=500
+              end
+
+    logger.info("Query: " +"SELECT outboundprice*#{publicoutbound} precio FROM public.cos_public_outbound_bandwidth_pricing WHERE country_offer='#{country}' and service_type='#{service_type}' and region='#{region}' and resiliency='#{resiliency}' and outboundlimittb=#{outboundlimittb}")
+
+    connection = PG.connect :dbname => basededatos, :host => hostdb,:user => usuario, :port=>31184, :password => contrasena
+    t_messages = connection.exec "SELECT outboundprice*#{publicoutbound} precio FROM public.cos_public_outbound_bandwidth_pricing WHERE country_offer='#{country}' and service_type='#{service_type}' and region='#{region}' and resiliency='#{resiliency}' and outboundlimittb=#{outboundlimittb}"
+    t_messages.each do |s_message|
+      resultado3=s_message['precio'].to_f
+      logger.info("precio: "+resultado3.to_s)
+    end
+    logger.info(resultado.to_s)
+  rescue PG::Error => e
+    logger.info(e.message.to_s)
+  ensure
+    connection.close if connection
+  end
+  resultado={precio: (resultado1+resultado2+resultado3).round(2), "nota": "El precio para algunos escenarios puede varias 10%, valida en cloud.ibm.com. Ingresa los siguientes valores: Pais:#{country} Tipo de storage:#{service_type} region:#{region} resiliencia:#{resiliency} storage:#{storage} retrival:#{retrival} publicoutbound:#{publicoutbound} Op A:#{opa} Op B:#{opb} "}
+  logger.info("precio: "+resultado.to_s)
+  return resultado
+end
+
 get '/' do
     'APIs Optimización'
 end
+
 
 
 namespace '/api/lvl2' do
   before do
     content_type 'application/json'
   end
-  #urlapi="localhost:8080"
-  urlapi="http://apis.ioi17ary7au.svc.cluster.local"
+  urlapi="localhost:8080"
+  #urlapi="http://apis.ioi17ary7au.svc.cluster.local"
 
   get '/pxbackupsol' do
     logger = Logger.new(STDOUT)
@@ -131,11 +342,15 @@ namespace '/api/lvl2' do
     ##########################
     # Calculo Almacenamiento
     ##########################
+    #logger.info("********************************")
+    #callapi= proc_volumenrespaldospxbackup_w_pxenterprise(almacenamientogb,rsemanal,rsemanalretencion,rdiario,rdiarioretencion,rmensual,rmensualretencion, ranual, ranualretencion, diff).to_json
+    #callapi="#{urlapi}/api/v1/volumenrespaldospxbackup_w_pxenterprise?almacenamientogb=#{almacenamientogb}&rsemanal=#{rsemanal}&rsemanalretencion=#{rsemanalretencion}&rdiario=#{rdiario}&rdiarioretencion=#{rdiarioretencion}&rmensual=#{rmensual}&rmensualretencion=#{rmensualretencion}&ranual=#{ranual}&ranualretencion=#{ranualretencion}&diff=#{diff}"
+
+    #logger.info(callapi)
     logger.info("********************************")
-    callapi="#{urlapi}/api/v1/volumenrespaldospxbackup_w_pxenterprise?almacenamientogb=#{almacenamientogb}&rsemanal=#{rsemanal}&rsemanalretencion=#{rsemanalretencion}&rdiario=#{rdiario}&rdiarioretencion=#{rdiarioretencion}&rmensual=#{rmensual}&rmensualretencion=#{rmensualretencion}&ranual=#{ranual}&ranualretencion=#{ranualretencion}&diff=#{diff}"
-    logger.info(callapi)
-    logger.info("********************************")
-    respuestasizing = RestClient.get callapi, {:params => {}}
+    logger.info("Calculo de almacenamiento")
+    #respuestasizing = RestClient.get callapi, {:params => {}}
+    respuestasizing = proc_volumenrespaldospxbackup_w_pxenterprise(almacenamientogb,rsemanal,rsemanalretencion,rdiario,rdiarioretencion,rmensual,rmensualretencion, ranual, ranualretencion, diff).to_json
     logger.info(respuestasizing.to_s)
     almacenamientocos=JSON.parse(respuestasizing.to_s)
     almacenamientorespaldos=almacenamientocos["volumentotalcomprimidogb"]
@@ -144,11 +359,14 @@ namespace '/api/lvl2' do
     ##########################
     # Calculo clúster para PX-Backup
     ##########################
+    logger.info("********************************")
+    logger.info("Calculo de clúster PXBackup")
     tamanoiks=2  #de acuerdo a documentación de Portworx debe ser 3, con 2 funciona bien
     flavoriks="4x16" #pruebas realizadas con 4x16, de acuerdo a Portworx debe ser 4x8 y 3 nodos
     infra_type="shared"
-    respuestasizing = RestClient.get "#{urlapi}/api/v1/ikspreciocluster?region=#{regioncluster}&wn=#{tamanoiks}&flavor=#{flavoriks}&infra_type=#{infra_type}", {:params => {}}
-    clusteriks=JSON.parse(respuestasizing.to_s)
+    #respuestasizing = RestClient.get "#{urlapi}/api/v1/ikspreciocluster?region=#{regioncluster}&wn=#{tamanoiks}&flavor=#{flavoriks}&infra_type=#{infra_type}", {:params => {}}
+    #clusteriks=JSON.parse(respuestasizing.to_s)
+    clusteriks=JSON.parse(proc_ikspreciocluster(tamanoiks,flavoriks,infra_type,regioncluster))
     logger.info("RestClient: " +respuestasizing.to_s);
     logger.info("JSON : "+ clusteriks.to_s);
     preciofinal=preciofinal+clusteriks[0]["precio"]
@@ -157,14 +375,17 @@ namespace '/api/lvl2' do
     ##########################
     # Calculo precio para PX-Backup
     ##########################
+    logger.info("********************************")
+    logger.info("Calculo de precio PX-Backup")
     tamanoiks=2  #de acuerdo a documentación de Portworx debe ser 3, con 2 funciona bien
     flavoriks="4x16" #pruebas realizadas con 4x16, de acuerdo a Portworx debe ser 4x8 y 3 nodos
     infra_type="shared"
-    respuestasizing = RestClient.get "#{urlapi}/api/v1/pxbackupprecio?workers=#{tamanoiks}", {:params => {}}
-    pxbackup=JSON.parse(respuestasizing.to_s)
-    logger.info("RestClient: " +respuestasizing.to_s);
+#    respuestasizing = RestClient.get "#{urlapi}/api/v1/pxbackupprecio?workers=#{tamanoiks}", {:params => {}}
+#    pxbackup=JSON.parse(respuestasizing.to_s)
+    pxbackup= proc_pxbackupprecio(tamanoiks).to_json
+#    logger.info("RestClient: " +respuestasizing.to_s);
     logger.info("JSON : "+ pxbackup.to_s);
-    preciofinal=preciofinal+pxbackup["precio"]
+    preciofinal=preciofinal+pxbackup["precio"].to_f
     resultado.push(pxbackup)
 
     ##########################
@@ -173,11 +394,13 @@ namespace '/api/lvl2' do
     tamanoiks=2  #de acuerdo a documentación de Portworx debe ser 3, con 2 funciona bien
     flavoriks="4x16" #pruebas realizadas con 4x16, de acuerdo a Portworx debe ser 4x8 y 3 nodos
     infra_type="shared"
+    logger.info("********************************")
+    logger.info("Calculo de precio COS")
 
 
-    countryrespaldo = "#{params['countryrespaldo']}"
+    countryrespaldo = "mexico"#considera que el país por defecto es mexico
     service_type ="cold vault" #considera que los respaldos son cold vault
-    region ="mexico" #considera que el país por defecto es México
+    region ="#{params['countryrespaldo']}"
     resiliency ="#{params['resiliencybackup']}"
     #storage="#{params['storage']}".to_i #Unidades en GB
     retrival=almacenamientorespaldos*0.05 #Considera 5% de recuperación de respaldos
@@ -185,9 +408,10 @@ namespace '/api/lvl2' do
     opa=10000 #valores bajos esperados para un respaldo
     opb=100000 #valores bajos esperados para un respaldo
 
-    respuestasizing = RestClient.get "#{urlapi}/api/v1/cospricing?country=#{countryrespaldo}&region=#{region}&type=#{service_type}&resiliency=#{resiliency}&storage=#{almacenamientorespaldos}&retrival=#{retrival}&opa=#{opa}&opb=#{opb}&publicoutbound=#{publicoutbound}", {:params => {}}
-    cospricing=JSON.parse(respuestasizing.to_s)
-    preciofinal=preciofinal+cospricing["precio"]
+    #respuestasizing = RestClient.get "#{urlapi}/api/v1/cospricing?country=#{countryrespaldo}&region=#{region}&type=#{service_type}&resiliency=#{resiliency}&storage=#{almacenamientorespaldos}&retrival=#{retrival}&opa=#{opa}&opb=#{opb}&publicoutbound=#{publicoutbound}", {:params => {}}
+    #cospricing=JSON.parse(respuestasizing.to_s)
+    cospricing=proc_cospricing(countryrespaldo,region,service_type,resiliency,almacenamientorespaldos,retrival,opa,opb,publicoutbound).to_json
+    preciofinal=preciofinal+cospricing["precio"].to_f
     logger.info("precio calculado: "+preciofinal.to_s)
     resultado.push(cospricing)
     resultado.push({preciototal:preciofinal.round(2)})
@@ -214,18 +438,18 @@ namespace '/api/v1' do
     instancias="#{params['instancias']}".to_i
     solicitudeshttp = "#{params['solicitudeshttp']}".to_i
     resultado=[]
-    
+
     begin
       #Precio mensual
       #Se multiplica precio base (Seg) por 86400 para obtener precio mensual
       precio_cpu = cpu * 0.0000319 * 86400
       precio_ram = ram * 0.0000033 * 86400
 
-      total = (precio_cpu + precio_ram) * instancias 
+      total = (precio_cpu + precio_ram) * instancias
 
       solicitudes_aux = solicitudeshttp / 1000000
 
-      while solicitudes_aux > 0 
+      while solicitudes_aux > 0
         total = total + 0.50
         solicitudes_aux = solicitudes_aux - 1
       end
@@ -298,11 +522,11 @@ get '/sizingclusteroptimoproductivo' do
   cpu="#{params['cpu']}".to_f+2
   ram="#{params['ram']}".to_f+8
   resultado=[]
-  
+
   if infra_type=="bm"
         cpu=cpu/2
   end
-    
+
   begin
     connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
     t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_wo_subs precio, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_w_subs precio_subs from public.ocp_classic_flavors where greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))>=2 order by precio asc LIMIT 1"
@@ -323,11 +547,11 @@ get '/sizingclusterproductivo' do
   cpu="#{params['cpu']}".to_f+2
   ram="#{params['ram']}".to_f+8
   resultado=[]
-  
+
   if infra_type=="bm"
         cpu=cpu/2
-  end  
-    
+  end
+
   begin
     connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
     t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1 as workers, (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)*price_wo_subs precio, (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)*price_w_subs precio_subs from public.ocp_classic_flavors where (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)>=2 order by precio asc"
@@ -395,7 +619,7 @@ end
     if infra_type=="bm"
         cpu=cpu/2
     end
-      
+
     begin
     connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type,#{params['wn']} as workers, #{params['wn']}*price_w_subs precio, #{params['wn']}*price_wo_subs precio_wo_subs, region from public.ocp_classic_flavors where infra_type='#{infra_type}' and region='#{region}' and flavor='#{flavor}' order by precio asc LIMIT 1"
@@ -445,7 +669,7 @@ end
   #
   ####################################################################
 
-  
+
   get '/volumenrespaldosveeam' do
     logger = Logger.new(STDOUT)
     almacenamientogb="#{params['almacenamientogb']}"
@@ -459,7 +683,7 @@ end
     ranual="#{params['ranual']}"
     ranualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
     diff="#{params['diff']}"
-    ratiocompresion=2 
+    ratiocompresion=2
     volumentotal=0
     volumentotalcomprimido=0
     resultado=[]
@@ -518,53 +742,56 @@ end
     ranual="#{params['ranual']}"
     ranualretencion="#{params['ranualretencion']}"#cantidad de backups retenidos
     diff="#{params['diff']}".to_s
-    ratiocompresion=2.5 #algoritmo de compresion LZ77
-    volumentotal=0
-    volumentotalcomprimido=0
-      
-      logger.info("Parametros recibidos:")
-      logger.info("almacenamientogb:"+almacenamientogb.to_s)
-      logger.info("rsemanal:"+rsemanal.to_s)
-      logger.info("rsemanalretencion:"+ rsemanalretencion.to_s)
-      logger.info("rdiario:" + rdiario.to_s)
-      logger.info("rdiarioretencion:" +rdiarioretencion.to_s)
-      logger.info("rmensual:" + rmensual.to_s)
-      logger.info("rmensualretencion:" +rmensualretencion.to_s)
-      logger.info("ranual:" +ranual.to_s)
-      logger.info("ranualretencion:" +ranualretencion.to_s)
-      logger.info("diff:" +diff.to_s)
-    resultado=[]
-    begin
-      logger.info("calculando almacenamiento")
-      if rsemanal
-        vol=almacenamientogb.to_f*rsemanalretencion.to_i
-        logger.info("volumen semanal (GB):"+vol.to_s)
-        volumentotal=volumentotal+vol
-        resultado={ volumentotal: volumentotal}
-      end
-      if rdiario
-        vol=almacenamientogb.to_f*rdiarioretencion.to_i*diff.to_i/100
-        logger.info("volumen diario (GB):"+vol.to_s)
-        volumentotal=volumentotal+vol
-        resultado={ volumentotal: volumentotal}
-      end
-      if rmensual
-        vol=almacenamientogb.to_f*rmensualretencion.to_i
-        logger.info("volumen mensual (GB):"+vol.to_s)
-        volumentotal=volumentotal+vol
-        resultado={ volumentotal: volumentotal}
-      end
-      if ranual
-        vol=almacenamientogb.to_f*ranualretencion.to_i
-        logger.info("volumen anual (GB):"+vol.to_s)
-        volumentotal=volumentotal+vol
-        resultado={ volumentotal: volumentotal}
-      end
-      volumentotalcomprimido=volumentotal/ratiocompresion
-      resultado={ volumentotalgb: volumentotal, volumentotalcomprimidogb: volumentotalcomprimido}
-    rescue PG::Error => e
-      logger.info(e.message.to_s)
-    end
+
+    resultado=proc_volumenrespaldospxbackup_w_pxenterprise(almacenamientogb,rsemanal,rsemanalretencion,rdiario,rdiarioretencion,rmensual,rmensualretencion, ranual, ranualretencion, diff)
+
+    #ratiocompresion=2.5 #algoritmo de compresion LZ77
+    #volumentotal=0
+    #volumentotalcomprimido=0
+
+    #  logger.info("Parametros recibidos:")
+    #  logger.info("almacenamientogb:"+almacenamientogb.to_s)
+    #  logger.info("rsemanal:"+rsemanal.to_s)
+    #  logger.info("rsemanalretencion:"+ rsemanalretencion.to_s)
+    #  logger.info("rdiario:" + rdiario.to_s)
+    #  logger.info("rdiarioretencion:" +rdiarioretencion.to_s)
+    #  logger.info("rmensual:" + rmensual.to_s)
+    #  logger.info("rmensualretencion:" +rmensualretencion.to_s)
+    #  logger.info("ranual:" +ranual.to_s)
+    #  logger.info("ranualretencion:" +ranualretencion.to_s)
+    #  logger.info("diff:" +diff.to_s)
+    #resultado=[]
+    #begin
+    #  logger.info("calculando almacenamiento")
+    #  if rsemanal
+    #    vol=almacenamientogb.to_f*rsemanalretencion.to_i
+    #    logger.info("volumen semanal (GB):"+vol.to_s)
+    #    volumentotal=volumentotal+vol
+    #    resultado={ volumentotal: volumentotal}
+    #  end
+    #  if rdiario
+    #    vol=almacenamientogb.to_f*rdiarioretencion.to_i*diff.to_i/100
+    #    logger.info("volumen diario (GB):"+vol.to_s)
+    #    volumentotal=volumentotal+vol
+    #    resultado={ volumentotal: volumentotal}
+    #  end
+    #  if rmensual
+    #    vol=almacenamientogb.to_f*rmensualretencion.to_i
+    #    logger.info("volumen mensual (GB):"+vol.to_s)
+    #    volumentotal=volumentotal+vol
+    #    resultado={ volumentotal: volumentotal}
+    #  end
+    #  if ranual
+    #    vol=almacenamientogb.to_f*ranualretencion.to_i
+    #    logger.info("volumen anual (GB):"+vol.to_s)
+    #    volumentotal=volumentotal+vol
+    #    resultado={ volumentotal: volumentotal}
+    #  end
+    #  volumentotalcomprimido=volumentotal/ratiocompresion
+    #  resultado={ volumentotalgb: volumentotal, volumentotalcomprimidogb: volumentotalcomprimido}
+    #rescue PG::Error => e
+    #  logger.info(e.message.to_s)
+    #end
     resultado.to_json
   end
 
@@ -625,14 +852,15 @@ end
     workers="#{params['workers']}"
     resultado=[]
     precio=0
-    begin
-      logger.info("calculando precio px-backup")
-      precio=workers.to_i*0.2*720
-      logger.info("precio"+precio.round(2).to_s)
-      resultado={ workers: workers, precio: precio.round(2).to_f}
-    rescue PG::Error => e
-      logger.info(e.message.to_s)
-    end
+    resultado=proc_pxbackupprecio(workers)
+#    begin
+#      logger.info("calculando precio px-backup")
+#      precio=workers.to_i*0.2*720
+#      logger.info("precio"+precio.round(2).to_s)
+#      resultado={ workers: workers, precio: precio.round(2).to_f}
+#    rescue PG::Error => e
+#      logger.info(e.message.to_s)
+#    end
     resultado.to_json
   end
 
@@ -648,7 +876,7 @@ end
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
-    
+
     if infra_type=="bm"
         cpu=cpu/2
     end
@@ -674,21 +902,21 @@ end
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
-    
-    
-      
-    begin
-      connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
-      t_messages = connection.exec "select flavor, infra_type,#{params['wn']} as workers, #{params['wn']}*price precio,region from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' and flavor='#{flavor}' order by precio asc LIMIT 1"
-      t_messages.each do |s_message|
-          resultado.push({ flavor: s_message['flavor'], infra_type: s_message['infra_type'], workers: s_message['workers'], precio: s_message['precio'].to_f, region: s_message['region'] })
-      end
-      logger.info(resultado.to_s)
-    rescue PG::Error => e
-      logger.info(e.message.to_s)
-    ensure
-      connection.close if connection
-    end
+    resultado=proc_ikspreciocluster(wn="3",flavor="4x16",infra_type="shared",region="dallas")
+
+
+#    begin
+#      connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
+#      t_messages = connection.exec "select flavor, infra_type,#{params['wn']} as workers, #{params['wn']}*price precio,region from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' and flavor='#{flavor}' order by precio asc LIMIT 1"
+#      t_messages.each do |s_message|
+#          resultado.push({ flavor: s_message['flavor'], infra_type: s_message['infra_type'], workers: s_message['workers'], precio: s_message['precio'].to_f, region: s_message['region'] })
+#      end
+#      logger.info(resultado.to_s)
+#    rescue PG::Error => e
+#      logger.info(e.message.to_s)
+#    ensure
+#      connection.close if connection
+#    end
     resultado.to_json
   end
 
@@ -699,11 +927,11 @@ end
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
-    
+
     if infra_type=="bm"
         cpu=cpu/2
     end
-      
+
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price precio from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' order by precio asc"
@@ -874,7 +1102,7 @@ namespace '/api/v2' do
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
-              
+
     if infra_type=="bm"
         cpu=cpu/2
     end
@@ -909,11 +1137,11 @@ namespace '/api/v2' do
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
-    
+
     if infra_type=="bm"
         cpu=cpu/2
     end
-              
+
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_wo_subs precio, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_w_subs precio_subs from public.ocp_classic_flavors where greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))>=2 and infra_type='#{infra_type}' and region='#{region}' order by precio asc"
@@ -945,11 +1173,11 @@ namespace '/api/v2' do
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
-    
+
     if infra_type=="bm"
         cpu=cpu/2
-    end        
-            
+    end
+
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type, (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1) as workers, (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)*price_wo_subs precio, (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)*price_w_subs precio_subs from public.ocp_classic_flavors where (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)>=2 and infra_type='#{infra_type}' and region='#{region}' order by precio asc LIMIT 1"
@@ -981,12 +1209,12 @@ namespace '/api/v2' do
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
-    
-            
+
+
     if infra_type=="bm"
         cpu=cpu/2
     end
-            
+
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, (infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1) as workers, (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)*price_wo_subs precio, (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)*price_w_subs precio_subs from public.ocp_classic_flavors where (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)>=2 and infra_type='#{infra_type}' and region='#{region}' order by precio asc"
@@ -1002,7 +1230,7 @@ namespace '/api/v2' do
     resultado.to_json
   end
 
-          
+
 
   get '/sizingclusteroptimosubs' do
     logger = Logger.new(STDOUT)
@@ -1020,11 +1248,11 @@ namespace '/api/v2' do
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
-          
+
     if infra_type=="bm"
         cpu=cpu/2
-    end   
-          
+    end
+
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_wo_subs precio, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_w_subs precio_subs from public.ocp_classic_flavors where greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))>=2 and infra_type='#{infra_type}' and region='#{region}' order by precio_subs asc LIMIT 1"
@@ -1056,11 +1284,11 @@ namespace '/api/v2' do
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
-      
+
     if infra_type=="bm"
         cpu=cpu/2
-    end   
-      
+    end
+
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_wo_subs precio, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price_w_subs precio_subs from public.ocp_classic_flavors where greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))>=2 and infra_type='#{infra_type}' and region='#{region}' order by precio_subs asc"
