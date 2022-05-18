@@ -298,6 +298,10 @@ get '/sizingclusteroptimoproductivo' do
   cpu="#{params['cpu']}".to_f+2
   ram="#{params['ram']}".to_f+8
   resultado=[]
+  
+  if infra_type=="bm"
+        cpu=cpu/2
+  end
     
   begin
     connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
@@ -319,6 +323,11 @@ get '/sizingclusterproductivo' do
   cpu="#{params['cpu']}".to_f+2
   ram="#{params['ram']}".to_f+8
   resultado=[]
+  
+  if infra_type=="bm"
+        cpu=cpu/2
+  end  
+    
   begin
     connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
     t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1 as workers, (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)*price_wo_subs precio, (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)*price_w_subs precio_subs from public.ocp_classic_flavors where (greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))+1)>=2 order by precio asc"
@@ -382,6 +391,11 @@ end
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
+
+    if infra_type=="bm"
+        cpu=cpu/2
+    end
+      
     begin
     connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type,#{params['wn']} as workers, #{params['wn']}*price_w_subs precio, #{params['wn']}*price_wo_subs precio_wo_subs, region from public.ocp_classic_flavors where infra_type='#{infra_type}' and region='#{region}' and flavor='#{flavor}' order by precio asc LIMIT 1"
@@ -635,7 +649,7 @@ end
     region="#{params['region']}"
     resultado=[]
     
-      if infra_type=="bm"
+    if infra_type=="bm"
         cpu=cpu/2
     end
     begin
@@ -660,6 +674,9 @@ end
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
+    
+    
+      
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type,#{params['wn']} as workers, #{params['wn']}*price precio,region from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' and flavor='#{flavor}' order by precio asc LIMIT 1"
@@ -682,6 +699,11 @@ end
     infra_type="#{params['infra_type']}"
     region="#{params['region']}"
     resultado=[]
+    
+    if infra_type=="bm"
+        cpu=cpu/2
+    end
+      
     begin
       connection = PG.connect :dbname => 'ibmclouddb', :host => '313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud',:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
       t_messages = connection.exec "select flavor, infra_type, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb)) as workers, greatest(ceil(#{cpu}/cpu),ceil(#{ram}/ram_gb))*price precio from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' order by precio asc"
