@@ -1493,7 +1493,7 @@ namespace '/api/v2' do
     resultado.to_json
   end
 
-  get '/sizingclustersubs' do
+  get '/sizingclustersubs_vpc' do
     logger = Logger.new(STDOUT)
     cpu_aux="#{params['cpu']}".to_f+2
     ram_aux="#{params['ram']}".to_f+8
