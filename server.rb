@@ -68,8 +68,8 @@ def proc_ikspreciocluster(wn="2",flavor="4x16",infra_type="shared",region="dalla
   resultado=[]
 
   begin
-    #hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud' #privada
-    hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud' #publica
+    hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud' #privada
+    #hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud' #publica
     connection = PG.connect :dbname => 'ibmclouddb', :host => hostdb,:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
     t_messages = connection.exec "select flavor, infra_type,#{wn} as workers, #{wn}*price precio,region from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' and flavor='#{flavor}' order by precio asc LIMIT 1"
     t_messages.each do |s_message|
@@ -98,7 +98,7 @@ def proc_pxbackupprecio(workers=2)
 
 def proc_cospricing(country="mexico",region="dallas",service_type="cold vault",resiliency="regional",storage=1000,retrival=1000,opa=3000,opb=30000,publicoutbound=0)
   hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud' #privada
-  hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud' #publica
+  #hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud' #publica
   usuario='ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b'
   contrasena='535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
   basededatos='ibmclouddb'
