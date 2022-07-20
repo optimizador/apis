@@ -68,8 +68,8 @@ def proc_ikspreciocluster(wn="2",flavor="4x16",infra_type="shared",region="dalla
   resultado=[]
 
   begin
-    hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud' #privada
-    #hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud' #publica
+    #hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud' #privada
+    hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud' #publica
     connection = PG.connect :dbname => 'ibmclouddb', :host => hostdb,:user => 'ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b', :port=>31184, :password => '535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
     t_messages = connection.exec "select flavor, infra_type,#{wn} as workers, #{wn}*price precio,region from public.iks_classic_flavors where infra_type='#{infra_type}' and region='#{region}' and flavor='#{flavor}' order by precio asc LIMIT 1"
     t_messages.each do |s_message|
@@ -98,7 +98,7 @@ def proc_pxbackupprecio(workers=2)
 
 def proc_cospricing(country="mexico",region="dallas",service_type="cold vault",resiliency="regional",storage=1000,retrival=1000,opa=3000,opb=30000,publicoutbound=0)
   hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.private.databases.appdomain.cloud' #privada
-  #hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud' #publica
+  hostdb='313a3aa9-6e5d-4e96-8447-7f2846317252.0135ec03d5bf43b196433793c98e8bd5.databases.appdomain.cloud' #publica
   usuario='ibm_cloud_31bf8a1b_1bbe_49e4_8dc2_0df605f5f88b'
   contrasena='535377ecca248285821949f6c71887d73a098f00b6908a645191503ab1d72fb3'
   basededatos='ibmclouddb'
@@ -360,18 +360,20 @@ namespace '/api/lvl2' do
     # Calculo clúster para PX-Backup
     ##########################
     logger.info("********************************")
-    logger.info("Calculo de clúster PXBackup")
+    logger.info("Calculo de clúster de IKS para PXBackup")
     tamanoiks=2  #de acuerdo a documentación de Portworx debe ser 3, con 2 funciona bien
     flavoriks="4x16" #pruebas realizadas con 4x16, de acuerdo a Portworx debe ser 4x8 y 3 nodos
     infra_type="shared"
     #respuestasizing = RestClient.get "#{urlapi}/api/v1/ikspreciocluster?region=#{regioncluster}&wn=#{tamanoiks}&flavor=#{flavoriks}&infra_type=#{infra_type}", {:params => {}}
     #clusteriks=JSON.parse(respuestasizing.to_s)
     clusteriks=JSON.parse(proc_ikspreciocluster(tamanoiks,flavoriks,infra_type,regioncluster))
-    logger.info("RestClient: " +respuestasizing.to_s);
-    logger.info("JSON : "+ clusteriks.to_s);
-    preciofinal=preciofinal+clusteriks[0]["precio"]
-    resultado.push(clusteriks[0])
+    logger.info("JSON : "+ clusteriks.to_s)
+    logger.info("precio clúster PXBackup : "+ clusteriks[0]["precio"].to_s)
 
+
+    preciofinal=preciofinal+clusteriks[0]["precio"].to_f
+    resultado.push(clusteriks[0])
+    logger.info("precio solucion : "+ preciofinal.to_s)
     ##########################
     # Calculo precio para PX-Backup
     ##########################
@@ -382,10 +384,13 @@ namespace '/api/lvl2' do
     infra_type="shared"
 #    respuestasizing = RestClient.get "#{urlapi}/api/v1/pxbackupprecio?workers=#{tamanoiks}", {:params => {}}
 #    pxbackup=JSON.parse(respuestasizing.to_s)
-    pxbackup= proc_pxbackupprecio(tamanoiks).to_json
+    pxbackup= JSON.parse(proc_pxbackupprecio(tamanoiks).to_json)
 #    logger.info("RestClient: " +respuestasizing.to_s);
     logger.info("JSON : "+ pxbackup.to_s);
+    logger.info("precio PX-Backup : "+ pxbackup["precio"].to_s);
+
     preciofinal=preciofinal+pxbackup["precio"].to_f
+    logger.info("precio solucion : "+ preciofinal.to_s)
     resultado.push(pxbackup)
 
     ##########################
@@ -410,9 +415,10 @@ namespace '/api/lvl2' do
 
     #respuestasizing = RestClient.get "#{urlapi}/api/v1/cospricing?country=#{countryrespaldo}&region=#{region}&type=#{service_type}&resiliency=#{resiliency}&storage=#{almacenamientorespaldos}&retrival=#{retrival}&opa=#{opa}&opb=#{opb}&publicoutbound=#{publicoutbound}", {:params => {}}
     #cospricing=JSON.parse(respuestasizing.to_s)
-    cospricing=proc_cospricing(countryrespaldo,region,service_type,resiliency,almacenamientorespaldos,retrival,opa,opb,publicoutbound).to_json
+    cospricing=JSON.parse(proc_cospricing(countryrespaldo,region,service_type,resiliency,almacenamientorespaldos,retrival,opa,opb,publicoutbound).to_json)
+    logger.info("precio COS: "+cospricing["precio"].to_s)
     preciofinal=preciofinal+cospricing["precio"].to_f
-    logger.info("precio calculado: "+preciofinal.to_s)
+    logger.info("precio solucion: "+preciofinal.to_s)
     resultado.push(cospricing)
     resultado.push({preciototal:preciofinal.round(2)})
     resultado.to_json
